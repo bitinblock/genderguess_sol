@@ -11,6 +11,13 @@
         </Col>
       </Row>
       <Row>
+        <Col span="6" offset="9">
+          <Alert banner show-icon type="error" v-if="!metamaskPresent">
+              <b>Notice:</b> Metamask not detected
+          </Alert>
+        </Col>
+      </Row>
+      <Row>
         <Col span="12" offset="6">
           <Tabs @on-click="changepage" style="width:100%" :value="selectedTab">
                   <TabPane name="participate" label="Participate" icon="ios-compose"></TabPane>
@@ -34,13 +41,15 @@
 <script>
 import web3 from './router/web3';
 import lottery from './lottery';
+
 export default {
   name: 'Apps',
   data () {
     return {
       theme1: 'light',
-      selectedTab:this.$router.currentRoute.name,
-      admin: false
+      selectedTab: this.$route.name,
+      admin: false,
+      metamaskPresent:true
     }
   },
   methods: {
@@ -49,17 +58,27 @@ export default {
     }
   },
   created () {
-    var firstAccount;
+    var thisInstnce = this; 
     web3.eth.getAccounts().then(e => { 
-      firstAccount = e[0];
-      lottery.methods.manager().call().then(manager =>{
-        if (firstAccount==manager){
-          this.admin=true
-        } else {
-          this.admin=false
-        }
-      })
-    })
+      var firstAccount = e[0];
+      if (firstAccount){
+        web3.eth.net.getId(function(err, networkId){
+          if(networkId != 4){
+            thisInstnce.metamaskPresent = false;
+          }
+        });
+        lottery.methods.manager().call().then(manager =>{
+          if (firstAccount==manager){
+            thisInstnce.admin=true
+            thisInstnce.$userEthAddress = firstAccount;
+          } else {
+            thisInstnce.admin=false
+          }
+        })
+      } else {
+        thisInstnce.metamaskPresent = false;
+      }
+    });
   }
 }
 </script>

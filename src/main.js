@@ -3,9 +3,9 @@
 import Vue from 'vue'
 import Apps from './App'
 import router from './router'
+import web3 from './router/web3'
 
 Vue.config.productionTip = false
-
 /* eslint-disable no-new */
 new Vue({
   el: '#app',

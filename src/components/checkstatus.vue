@@ -58,6 +58,7 @@ export default {
     },
     created () {
         var firstAccount;
+        this.formValidate.check=this.$userEthAddress;
         web3.eth.getAccounts().then(e => { 
             firstAccount = e[0];
             if (firstAccount){

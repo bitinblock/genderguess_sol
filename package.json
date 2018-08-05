@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "chart.js": "^2.7.2",
+    "fs": "0.0.1-security",
     "fs-extra": "^7.0.0",
     "ganache-cli": "^6.1.6",
     "iview": "^3.0.0",
+    "npm": "^6.3.0",
     "solc": "^0.4.24",
     "vue": "^2.5.2",
     "vue-chartjs": "^3.3.2",

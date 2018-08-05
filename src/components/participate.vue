@@ -1,14 +1,14 @@
 <template>
 <div>
   <div v-if="openParticipate">
-    <Row>
+    <!-- <Row>
       <Col span="12" offset="6">
-        <Alert banner show-icon type="error" v-if="nometamask">
+        <Alert banner show-icon type="error" v-if="!metamaskPresent">
           <b>Notice:</b> Metamask not detected
           <template slot="desc">Metamask is either not signed-in or not on Rinkeby TestNetwork. Please sign-in and refresh the page</template>
         </Alert>
       </Col>
-    </Row>
+    </Row> -->
     <Steps :current="current" direction="vertical">
       <Step :title="'Select Gender: '+selectedGender" content="Click to select">
         <Row>
@@ -34,11 +34,22 @@
       <Step title="Submit" content="Button">
         <Row>
           <Col :xs="{ span: 20, offset: 1 }" :sm="{ span: 20, offset: 1 }" :md="{ span: 20, offset: 1 }" :lg="{ span: 20, offset: 1 }">
-            <Button type="primary" size="large" @click.once="handleSpinCustom();handleSubmit()" :disabled="disabled_3">Submit</Button>
+            <Button type="primary" size="large" @click.once="handleSubmit()" :disabled="disabled_3">Submit</Button>
           </Col>
         </Row>
       </Step>
     </Steps>
+    <Modal
+        v-model="agrementModal"
+        title="Read Carefully and Click Ok to Agree"
+        @on-ok="ok">
+        <p>By clicking Ok <br>
+          1) You understand that you have gone through the smart contract and understood the code. <br>
+          2) You understand that the game can be cancelled if there are not enough participants. <br>
+          3) You understand that their is a potential that you may not get the prize money even if you are part of the final two. <br>
+          4) Under any circumstances, you cannt hold us liable for any of your losses!
+        </p>
+    </Modal>
   </div>
   <div v-if="closeParticipate">
     <Card style="width:320px">
@@ -66,10 +77,10 @@ export default {
       disabled_1: true,
       disabled_2: true,
       disabled_3: true,
-      nometamask: false,
       ethaddress:'',
       openParticipate:false,
-      closeParticipate:false
+      closeParticipate:false,
+      agrementModal: false
     }
   },
   methods: {
@@ -82,7 +93,18 @@ export default {
         this.disabled_1 = false;
       } else if (currentstep == 1){
          this.current = 2;
-         this.disabled_3 = this.nometamask;
+        if (this.metamaskPresent){
+          lottery.methods.Wallets(this.ethaddress).call().then(response =>{
+            console.log('​nextstep -> response', response);
+            if(response){
+                this.disabled_3 = true;
+            } else {
+              this.disabled_3 = false;
+            }   
+          })
+        } else {
+          this.disabled_3 = true;
+        }
       }   
     },
     handleSpinCustom () {
@@ -102,6 +124,10 @@ export default {
       });
     },
     handleSubmit () {
+      this.agrementModal = true;
+    },
+    ok () {
+      this.handleSpinCustom();
       var selectedGender;
       if (this.girlSelected){
         selectedGender = "girl"
@@ -125,7 +151,7 @@ export default {
                 'Track your transaction ',
                 h('a', { 
                     attrs: { 
-                      href: 'https://rinkeby.etherscan.io/tx/'+hash,
+                      href: 'https://etherscan.io/tx/'+hash,
                       target:'_blank'
                     }
                   }, 'here.'),
@@ -147,20 +173,16 @@ export default {
   },
   created () {
     var firstAccount;
+    console.log(this.$ethAddressTest)
     web3.eth.getAccounts().then(e => { 
       firstAccount = e[0];
       if (!firstAccount){
-        this.nometamask = true;
+        this.$metamaskPresent = false;
       } else {
        this.ethaddress = firstAccount;
       }
     });
-    web3.eth.net.getId().then(netId => {
-      if (netId != 4){
-        this.nometamask = true;
-      }
-    }); 
-
+ 
     lottery.methods.checkIsOpen().call().then(status => {
       if (status){
         this.openParticipate = true;

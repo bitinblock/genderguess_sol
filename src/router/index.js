@@ -9,13 +9,17 @@ import Admin from '@/components/adminconsole'
 import iView from 'iview'
 import 'iview/dist/styles/iview.css'
 import locale from 'iview/dist/locale/en-US'
+import fs from 'fs'
+import path from 'path'
+import web3 from '../router/web3';
 
 Vue.use(Router)
 Vue.use(vueResource)
 Vue.use(iView, { locale })
-
+Vue.use("/", 'index.html')
 
 export default new Router({
+  mode: 'history',
   routes: [
     {
       path: '/participate',
@@ -29,22 +33,22 @@ export default new Router({
     },
     {
       path: '/checkstatus',
-      name: 'Check Status',
+      name: 'checkstatus',
       component: CheckStatus
     },
     {
       path: '/faq',
-      name: 'F.A.Q Help',
+      name: 'faq',
       component: Faqhelp
     },
     {
       path: '/',
-      name: 'F.A.Q Help',
+      name: 'faq',
       component: Faqhelp
     },
     {
       path: '/admin',
-      name: 'Admin Only',
+      name: 'admin',
       component: Admin
     }
   ]
