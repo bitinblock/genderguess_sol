@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { formatAlert } from "../src/telegram.js";
 import { selectAlerts } from "../src/index.js";
 import { createJev } from "../src/jev.js";
+import { accountsQuery } from "../src/config.js";
+
+test("accountsQuery builds from: queries from handles and URLs", () => {
+  assert.equal(accountsQuery("https://x.com/LiveSquawk"), "from:LiveSquawk -is:retweet");
+  assert.equal(accountsQuery("@LiveSquawk, DeItaone"), "(from:LiveSquawk OR from:DeItaone) -is:retweet");
+});
 
 const post = {
   id: "1",

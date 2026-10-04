@@ -7,6 +7,7 @@ import { loadState, saveState } from "./state.js";
 const args = new Set(process.argv.slice(2));
 const once = args.has("--once");
 const dryRun = args.has("--dry-run");
+const backfill = args.has("--backfill");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...m) => console.log(new Date().toISOString(), ...m);
@@ -19,6 +20,17 @@ async function tick(config, state, scoreBatch) {
   const { posts, newestId } = await fetchNewPosts(config.x, state.sinceId);
   const fresh = posts.filter((p) => !state.seen.has(p.id));
   log(`fetched ${posts.length} posts, ${fresh.length} new`);
+
+  // First run: treat existing posts as already seen so old news isn't alerted.
+  if (!state.initialized && !backfill) {
+    posts.forEach((p) => state.seen.add(p.id));
+    state.sinceId = newestId;
+    state.initialized = true;
+    saveState(config.stateFile, state);
+    log(`baseline recorded (${posts.length} existing posts skipped); alerting on new posts from now on`);
+    return;
+  }
+  state.initialized = true;
 
   for (let i = 0; i < fresh.length; i += config.jev.batchSize) {
     const batch = fresh.slice(i, i + config.jev.batchSize);

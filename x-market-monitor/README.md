@@ -1,10 +1,10 @@
 # x-market-monitor
 
-Continuously watches an X feed, runs every new post through **JEV** (a Claude-based relevance scorer) to get a 0–100% confidence that it matters to the stock market, and sends posts scoring **70% or higher** to Telegram.
+Continuously watches an X feed (by default every post from [@LiveSquawk](https://x.com/LiveSquawk)), runs every new post through **JEV** (a Claude-based relevance scorer) to get a 0–100% confidence that it matters to the stock market, and sends posts scoring **70% or higher** to Telegram.
 
 ```
-X API (search query or list)  ──►  JEV score (Claude, JSON schema)  ──►  ≥ 70%?  ──►  Telegram
-        every 60s                    confidence, tickers, sentiment,                   alert
+X API (@LiveSquawk)         ──►  JEV score (Claude, JSON schema)  ──►  ≥ 70%?  ──►  Telegram
+        every 30s                    confidence, tickers, sentiment,                   alert
                                      reason
 ```
 
@@ -18,7 +18,7 @@ X API (search query or list)  ──►  JEV score (Claude, JSON schema)  ──
 cd x-market-monitor
 npm install
 cp .env.example .env   # fill in the keys
-npm run dry-run        # one cycle, prints alerts instead of sending
+npm run dry-run        # scores recent posts once, prints alerts instead of sending
 npm start              # runs continuously
 ```
 
@@ -26,12 +26,15 @@ npm start              # runs continuously
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `X_QUERY` | market keywords, English, no retweets | X search query that defines the feed |
+| `X_ACCOUNTS` | `LiveSquawk` | Comma-separated handles (or profile URLs) whose posts are scored |
+| `X_QUERY` | — | Custom X search query; overrides `X_ACCOUNTS` |
 | `X_LIST_ID` | — | Watch an X list instead of a query (e.g. a list of analysts and news accounts) |
 | `CONFIDENCE_THRESHOLD` | `70` | Minimum JEV score to forward to Telegram |
-| `POLL_INTERVAL_SECONDS` | `60` | How often to poll X |
+| `POLL_INTERVAL_SECONDS` | `60` (`.env.example`: `30`) | How often to poll X |
 | `JEV_MODEL` / `JEV_EFFORT` | `claude-opus-5-5` / `low` | Scoring model and reasoning effort |
 | `JEV_BATCH_SIZE` | `20` | Posts scored per Claude request |
+
+On the first `npm start`, posts that already exist are recorded as seen without alerting, so you only get new posts. Pass `--backfill` to score them too.
 
 State (last seen post id and recently processed ids) is kept in `state.json`, so restarts don't resend alerts.
 

@@ -16,6 +16,16 @@ function required(name) {
   return value;
 }
 
+export function accountsQuery(accounts) {
+  const handles = accounts
+    .split(",")
+    .map((a) => a.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "").replace(/\/.*$/, ""))
+    .filter(Boolean);
+  if (handles.length === 0) throw new Error("X_ACCOUNTS is empty");
+  const from = handles.map((h) => `from:${h}`).join(" OR ");
+  return `${handles.length > 1 ? `(${from})` : from} -is:retweet`;
+}
+
 export function loadConfig({ dryRun = false } = {}) {
   loadDotEnv();
   const env = process.env;
@@ -23,10 +33,8 @@ export function loadConfig({ dryRun = false } = {}) {
   const config = {
     x: {
       bearerToken: required("X_BEARER_TOKEN"),
-      // Either a search query or a list ID defines "the feed".
-      query:
-        env.X_QUERY ||
-        "(stocks OR earnings OR Fed OR CPI OR $SPY OR $QQQ OR IPO OR guidance) lang:en -is:retweet",
+      // The feed: a list ID, else X_QUERY, else every post from X_ACCOUNTS.
+      query: env.X_QUERY || accountsQuery(env.X_ACCOUNTS || "LiveSquawk"),
       listId: env.X_LIST_ID || "",
       maxResults: Number(env.X_MAX_RESULTS || 50),
     },
