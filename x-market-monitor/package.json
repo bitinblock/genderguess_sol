@@ -1,0 +1,19 @@
+{
+  "name": "x-market-monitor",
+  "version": "1.0.0",
+  "description": "Continuously monitors an X feed, scores each post for stock-market relevance (JEV), and forwards high-confidence posts to Telegram.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "once": "node src/index.js --once",
+    "dry-run": "node src/index.js --once --dry-run",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  }
+}
