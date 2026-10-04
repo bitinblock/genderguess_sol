@@ -19,6 +19,7 @@ cd x-market-monitor
 npm install
 cp .env.example .env   # fill in the keys
 npm run dry-run        # scores recent posts once, prints alerts instead of sending
+npm run last-hour      # scores the last 60 min and prints what would pass (sends nothing)
 npm start              # runs continuously
 ```
 

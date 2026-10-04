@@ -35,7 +35,8 @@ function normalize(body) {
 }
 
 // Returns new posts, oldest first, plus the newest id seen.
-export async function fetchNewPosts({ bearerToken, query, listId, maxResults }, sinceId) {
+// startTime (ISO string) limits a search to posts after that moment.
+export async function fetchNewPosts({ bearerToken, query, listId, maxResults }, sinceId, startTime) {
   let url;
   if (listId) {
     // List timelines don't support since_id; callers dedupe with the seen set.
@@ -48,11 +49,13 @@ export async function fetchNewPosts({ bearerToken, query, listId, maxResults }, 
       query,
       max_results: String(Math.min(Math.max(maxResults, 10), 100)),
     };
-    if (sinceId) params.since_id = sinceId;
+    if (startTime) params.start_time = startTime;
+    else if (sinceId) params.since_id = sinceId;
     url.search = new URLSearchParams(params);
   }
 
   const body = await getJson(url, bearerToken);
-  const posts = normalize(body).reverse();
+  let posts = normalize(body).reverse();
+  if (startTime) posts = posts.filter((p) => !p.createdAt || p.createdAt >= startTime);
   return { posts, newestId: body.meta?.newest_id || sinceId };
 }

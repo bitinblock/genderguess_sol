@@ -5,9 +5,13 @@ import { formatAlert, sendTelegram } from "./telegram.js";
 import { loadState, saveState } from "./state.js";
 
 const args = new Set(process.argv.slice(2));
-const once = args.has("--once");
+const once = args.has("--once") || process.argv.some((a) => a.startsWith("--lookback="));
 const dryRun = args.has("--dry-run");
-const backfill = args.has("--backfill");
+const lookbackArg = process.argv.find((a) => a.startsWith("--lookback="));
+const lookbackMinutes = lookbackArg ? Number(lookbackArg.split("=")[1]) : 0;
+// A lookback run is a one-off test: score that window, don't touch state.
+const backfill = args.has("--backfill") || lookbackMinutes > 0;
+const persist = !dryRun && !lookbackMinutes;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...m) => console.log(new Date().toISOString(), ...m);
@@ -17,8 +21,10 @@ export function selectAlerts(scored, threshold) {
 }
 
 async function tick(config, state, scoreBatch) {
-  const { posts, newestId } = await fetchNewPosts(config.x, state.sinceId);
-  const fresh = posts.filter((p) => !state.seen.has(p.id));
+  const startTime = lookbackMinutes ? new Date(Date.now() - lookbackMinutes * 60_000).toISOString() : undefined;
+  const { posts, newestId } = await fetchNewPosts(config.x, state.sinceId, startTime);
+  const fresh = lookbackMinutes ? posts : posts.filter((p) => !state.seen.has(p.id));
+  const save = () => persist && saveState(config.stateFile, state);
   log(`fetched ${posts.length} posts, ${fresh.length} new`);
 
   // First run: treat existing posts as already seen so old news isn't alerted.
@@ -26,11 +32,12 @@ async function tick(config, state, scoreBatch) {
     posts.forEach((p) => state.seen.add(p.id));
     state.sinceId = newestId;
     state.initialized = true;
-    saveState(config.stateFile, state);
+    save();
     log(`baseline recorded (${posts.length} existing posts skipped); alerting on new posts from now on`);
     return;
   }
   state.initialized = true;
+  let passed = 0;
 
   for (let i = 0; i < fresh.length; i += config.jev.batchSize) {
     const batch = fresh.slice(i, i + config.jev.batchSize);
@@ -40,6 +47,7 @@ async function tick(config, state, scoreBatch) {
     for (const post of scored) {
       log(`  [${String(post.confidence).padStart(3)}%] @${post.username}: ${post.text.slice(0, 80).replace(/\n/g, " ")}`);
     }
+    passed += alerts.length;
     for (const post of alerts) {
       if (dryRun) {
         log(`DRY RUN alert:\n${formatAlert(post)}`);
@@ -50,15 +58,17 @@ async function tick(config, state, scoreBatch) {
     }
     // Mark the batch seen only after it was scored and delivered.
     batch.forEach((p) => state.seen.add(p.id));
-    saveState(config.stateFile, state);
+    save();
   }
 
+  log(`${passed} of ${fresh.length} posts passed the ${config.jev.threshold}% threshold`);
   state.sinceId = newestId;
-  saveState(config.stateFile, state);
+  save();
 }
 
 async function main() {
   const config = loadConfig({ dryRun });
+  if (lookbackMinutes) config.x.maxResults = 100;
   const state = loadState(config.stateFile);
   const scoreBatch = createJev(config.jev);
 
